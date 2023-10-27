@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/create_menu"
+        android:orderInCategory="1"
+        android:title="Создать архив" />
+    <item
+        android:id="@+id/update_menu"
+        android:orderInCategory="2"
+        android:title="Обновить список" />
+    <item
+        android:id="@+id/exit_menu"
+        android:orderInCategory="3"
+        android:title="Выйти" />
+</menu>
