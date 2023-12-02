@@ -5,9 +5,9 @@
         android:orderInCategory="1"
         android:title="Создать архив" />
     <item
-        android:id="@+id/update_menu"
+        android:id="@+id/del_menu"
         android:orderInCategory="2"
-        android:title="Обновить список" />
+        android:title="Удалить" />
     <item
         android:id="@+id/exit_menu"
         android:orderInCategory="3"

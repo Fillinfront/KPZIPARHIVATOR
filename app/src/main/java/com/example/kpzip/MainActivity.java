@@ -1,5 +1,6 @@
 package com.example.kpzip;
 
+
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -10,6 +11,9 @@ import android.Manifest;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 import java.util.zip.ZipOutputStream;
 
 
@@ -17,18 +21,27 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.Settings;
+import android.util.Log;
+import android.util.SparseBooleanArray;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
+import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
+import android.widget.ListAdapter;
 import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
@@ -46,6 +59,10 @@ public class MainActivity extends AppCompatActivity {
     public static String zipNameExp;
 
     private static final int PERMISSION_REQUEST_CODE = 100;
+
+    public ArrayList<String> deleteList;
+
+    public boolean checkLongClick = false;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -74,11 +91,15 @@ public class MainActivity extends AppCompatActivity {
         swipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override
             public void onRefresh() {
-                zipFiles.clear();
-                createZipList();
+                updateList();
                 swipeRefreshLayout.setRefreshing(false);
             }
         });
+    }
+
+    public void updateList() {
+        zipFiles.clear();
+        createZipList();
     }
 
     public void createZipList() {
@@ -86,33 +107,82 @@ public class MainActivity extends AppCompatActivity {
 
         zipList(path);
 
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss", Locale.getDefault());
+
         List<String> zipFilesInformation = new ArrayList<>();
         for (File file : zipFiles) {
-            zipFilesInformation.add("Имя: " + file.getName() + "\nПуть: " + file.getAbsolutePath() + "\nРазмер: " + file.length() + " байт");
+            String modificationDate = dateFormat.format(new Date(file.lastModified()));
+            zipFilesInformation.add("Имя: " + file.getName() + "\nПуть: " + file.getAbsolutePath() + "\nРазмер: " + file.length() + " байт" + "\nДата изменения: " + modificationDate);
         }
 
+        deleteList = new ArrayList<>();
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, R.layout.listivew_layout, zipFilesInformation);
 
         listView = findViewById(R.id.listview);
+        listView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE);
         listView.setAdapter(adapter);
+
+        listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+                checkLongClick = true;
+
+                String fileInfo = (String)parent.getItemAtPosition(position);
+                String[] fileInfoParts = fileInfo.split("\n");
+
+                String path = fileInfoParts[1].split(": ")[1];
+
+                int color = Color.TRANSPARENT;
+                Drawable background = view.getBackground();
+                if (background instanceof ColorDrawable)
+                    color = ((ColorDrawable) background).getColor();
+
+                if (color == Color.WHITE) {
+                    deleteList.remove(path);
+                    view.setBackgroundColor(Color.LTGRAY);
+                } else {
+                    view.setBackgroundColor(Color.WHITE);
+                    deleteList.add(path);
+                }
+
+
+                return false;
+            }
+        });
+
 
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                String fileInfo = (String)parent.getItemAtPosition(position);
-                String[] fileInfoParts = fileInfo.split("\n");
+                if (!checkLongClick) {
+                    String fileInfo = (String)parent.getItemAtPosition(position);
+                    String[] fileInfoParts = fileInfo.split("\n");
 
-                String name = fileInfoParts[0].split(": ")[1];
-                String path = fileInfoParts[1].split(": ")[1];
+                    String name = fileInfoParts[0].split(": ")[1];
+                    String path = fileInfoParts[1].split(": ")[1];
 
-                zipNameExp = name;
-                zipPath = path;
+                    zipNameExp = name;
+                    zipPath = path;
 
-                Intent intent = new Intent(view.getContext(), MainActivity2.class);
+                    Intent intent = new Intent(view.getContext(), MainActivity2.class);
 
-                view.getContext().startActivity(intent);
+                    view.getContext().startActivity(intent);
+                }
             }
         });
+    }
+
+    public void deleteZIP() {
+        File file;
+
+        for (String path : deleteList) {
+            file = new File(path);
+            file.delete();
+        }
+
+        deleteList.clear();
+        checkLongClick = false;
+        updateList();
     }
 
     public void zipList(File directory) {
@@ -129,37 +199,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-        //  File directory = new File("/storage/emulated/0/Download/");
-
-       // File[] files = directory.listFiles(file -> file.getName().endsWith(".zip"));
-
-      //  if (files != null) {
-          //  for (File file : files) {
-          //      if (file.isFile() && file.getName().endsWith(".zip")) {
-          //          String filename = file.getName();
-          //          fileInfoList.add(filename);
-          //      }
-         //   }
-      //  }
-
-//        if (directory.exists() && directory.isDirectory()) {
-//            File[] files = directory.listFiles(file -> file.getName().endsWith(".zip"));
-//
-//            if (files != null) {
-//                for (File file : files) {
-//                    String fileName = file.getName();
-//                    String filePath = file.getAbsolutePath();
-//                    filePaths.add(filePath);
-//                    long fileSize = file.length();
-//                    String fileInfo = "Имя: " + fileName + "\nПуть: " + filePath + "\nРазмер: " + fileSize + " байт";
-//                    fileInfoList.add(fileInfo);
-//                }
-//            }
-//        }
-
-//        adapter = new ArrayAdapter<>(this, R.layout.listivew_layout, fileInfoList);
-//        listView.setAdapter(adapter);
-
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
@@ -170,8 +209,22 @@ public class MainActivity extends AppCompatActivity {
 
         if (id == R.id.create_menu) {
             createButton();
-        } else if (id == R.id.update_menu) {
-//            updateList();
+        } else if (id == R.id.del_menu) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                if (!Environment.isExternalStorageManager()) {
+                    Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
+                    String packageURI = String.valueOf(Uri.fromParts("package", getPackageName(), null));
+                    intent.setData(Uri.parse(packageURI));
+                    startActivity(intent);
+                } else {
+                    deleteZIP();
+                }
+            } else if (ContextCompat.checkSelfPermission(this,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED){
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
+            } else {
+                deleteZIP();
+            }
         } else if (id == R.id.exit_menu) {
             System.out.println("Выход");
         } else {
@@ -193,7 +246,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(DialogInterface dialog, int which) {
                 String zipName = input.getText().toString();
                 createZIP(zipName);
-//                updateList();
+                updateList();
             }
         });
 

@@ -12,6 +12,9 @@ import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -22,6 +25,8 @@ import android.provider.Settings;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -66,6 +71,10 @@ public class MainActivity2 extends AppCompatActivity {
     File zipFile;
     File file2;
 
+    public String nameoFile;
+
+    boolean checkLongClick = false;
+
     private static final int REQUEST_CODE_PICK_FILE = 1;
     private static final int REQUEST_CODE_WRITE_EXTERNAL_STORAGE = 2;
     private static final String TAG = "MainActivity2";
@@ -94,6 +103,33 @@ public class MainActivity2 extends AppCompatActivity {
         ArrayAdapter<String> filesAdapter = new ArrayAdapter<>(this, R.layout.listivew_layout,
                 fileInfos);
         listView.setAdapter(filesAdapter);
+
+        listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+                checkLongClick = true;
+
+                String fileInfo = (String)parent.getItemAtPosition(position);
+
+                int startIndex = fileInfo.indexOf("Имя: ") + "Имя: ".length();
+                int endIndex = fileInfo.indexOf(", Размер:");
+
+                nameoFile = fileInfo.substring(startIndex, endIndex);
+
+                int color = Color.TRANSPARENT;
+                Drawable background = view.getBackground();
+                if (background instanceof ColorDrawable)
+                    color = ((ColorDrawable) background).getColor();
+
+                if (color == Color.WHITE) {
+                    view.setBackgroundColor(Color.LTGRAY);
+                } else {
+                    view.setBackgroundColor(Color.WHITE);
+                }
+
+                return false;
+            }
+        });
 
     }
 
@@ -168,6 +204,57 @@ public class MainActivity2 extends AppCompatActivity {
         tempFile.renameTo(archiveFile);
     }
 
+    public void unzip() {
+        String unzipLocation = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) + "/unziplocation/";
+
+        File dir = new File(unzipLocation);
+        if (!dir.exists()) {
+            dir.mkdirs();
+        }
+
+        try (FileInputStream fin = new FileInputStream(MainActivity.zipPath);
+             ZipInputStream zin = new ZipInputStream(fin)) {
+
+            ZipEntry ze = null;
+            while ((ze = zin.getNextEntry()) != null) {
+                String path = unzipLocation + ze.getName();
+                Log.d("Decompress", "Extracting: " + path);
+
+
+                if (ze.isDirectory()) {
+                    File unzipDir = new File(path);
+                    if (!unzipDir.isDirectory()) {
+                        unzipDir.mkdirs();
+                        Log.d("Decompress", "Creating directory: " + path);
+                    }
+                } else {
+
+                    File outputFile = new File(path);
+                    File outputDir = new File(outputFile.getParent());
+                    if (!outputDir.exists()) {
+                        outputDir.mkdirs();
+                        Log.d("Decompress", "Creating directory: " + outputDir);
+                    }
+
+
+                    try (FileOutputStream fout = new FileOutputStream(outputFile)) {
+                        byte[] buffer = new byte[8192];
+                        int count;
+
+
+                        while ((count = zin.read(buffer)) != -1) {
+                            fout.write(buffer, 0, count);
+                        }
+                        Log.d("Decompress", "File extracted: " + path);
+                    }
+                    zin.closeEntry();
+                }
+            }
+        } catch (Exception e) {
+            Log.e("Decompress", "unzip", e);
+        }
+    }
+
     public static void copy(InputStream in, OutputStream out) throws IOException {
         byte[] buffer = new byte[1024];
         int read;
@@ -195,15 +282,55 @@ public class MainActivity2 extends AppCompatActivity {
                     openFilePicker();
                 }
             } else if (ContextCompat.checkSelfPermission(this,
-                    Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED){
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
             } else {
                 openFilePicker();
             }
         } else if (id == R.id.del_menu) {
-            System.out.println("Удалить");
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                if (!Environment.isExternalStorageManager()) {
+                    Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
+                    String packageURI = String.valueOf(Uri.fromParts("package", getPackageName(), null));
+                    intent.setData(Uri.parse(packageURI));
+                    startActivity(intent);
+                } else {
+                    try {
+                        removeFileFromZip();
+                        System.out.println("Файл успешно удален из архива.");
+                    } catch (IOException e) {
+                        System.err.println("Ошибка при удалении файла из архива: " + e.getMessage());
+                    }
+                }
+            } else if (ContextCompat.checkSelfPermission(this,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
+            } else {
+                try {
+                    removeFileFromZip();
+                    System.out.println("Файл успешно удален из архива.");
+                } catch (IOException e) {
+                    System.err.println("Ошибка при удалении файла из архива: " + e.getMessage());
+                }
+            }
         } else if (id == R.id.exit_menu) {
-            System.out.println("Выход");
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                if (!Environment.isExternalStorageManager()) {
+                    Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
+                    String packageURI = String.valueOf(Uri.fromParts("package", getPackageName(), null));
+                    intent.setData(Uri.parse(packageURI));
+                    startActivity(intent);
+                } else {
+                    unzip();
+                    System.out.println("Файл успешно удален из архива.");
+                }
+            } else if (ContextCompat.checkSelfPermission(this,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
+            } else {
+                unzip();
+                System.out.println("Файл успешно удален из архива.");
+            }
         } else {
             System.out.println("Ошибка");
         }
@@ -233,6 +360,44 @@ public class MainActivity2 extends AppCompatActivity {
         return fileList;
     }
 
+    public void removeFileFromZip() throws IOException {
+
+        String archivePath = MainActivity.zipPath;
+
+
+        String fileName = nameoFile;
+
+
+        File tempFile = new File(archivePath + ".temp");
+        ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(tempFile));
+
+
+        ZipInputStream zipInputStream = new ZipInputStream(new FileInputStream(archivePath));
+
+
+        for (ZipEntry entry = zipInputStream.getNextEntry(); entry != null; entry = zipInputStream.getNextEntry()) {
+
+            if (!entry.getName().equals(fileName)) {
+                zipOutputStream.putNextEntry(new ZipEntry(entry.getName()));
+
+
+                byte[] buffer = new byte[1024];
+                int bytesRead;
+                while ((bytesRead = zipInputStream.read(buffer)) != -1) {
+                    zipOutputStream.write(buffer, 0, bytesRead);
+                }
+            }
+        }
+
+
+        zipInputStream.close();
+        zipOutputStream.close();
+
+
+        File originalFile = new File(archivePath);
+        tempFile.renameTo(originalFile);
+    }
+
     public static class FileItem {
         private String fileName;
         private long fileSize;
@@ -250,88 +415,4 @@ public class MainActivity2 extends AppCompatActivity {
             return fileSize;
         }
     }
-
-//    public void btnClick(View view) {
-//        addFile();
-//    }
-//
-//    public void addFile() {
-//        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-//        intent.addCategory(Intent.CATEGORY_OPENABLE);
-//        intent.setType("*/*");
-//        startActivityForResult(Intent.createChooser(intent, "Выберите файл"), REQUEST_CODE);
-//    }
-//
-//    @Override
-//    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-//        if (requestCode == REQUEST_CODE && resultCode == RESULT_OK && data != null) {
-//            Uri uri = data.getData();
-//            newFilePath = uri.getPath();
-//        }
-//        super.onActivityResult(requestCode, resultCode, data);
-////        addFileToZIP(MainActivity.zipPath, newFilePath);
-//        System.out.println(newFilePath);
-//    }
-//
-//    public void addFileToZIP(String path, String file) {
-//        try {
-//            new ZipFile(path).addFile(file);
-//        } catch (ZipException e) {
-//            throw new RuntimeException(e);
-//        }
-//    }
 }
-
-
-
-
-
-
-
-
-//            for (String i : fileInfoList) {
-//                String fileName = file.getName();
-//                String filePath = file.getAbsolutePath();
-//                filePaths.add(filePath);
-//                long fileSize = file.length();
-//                String fileInfo = "Имя: " + fileName + "\nПуть: " + filePath + "\nРазмер: " + fileSize + " байт";
-//                fileInfoList.add(fileInfo);
-//            }
-//        }
-//
-//        adapter = new ArrayAdapter<>(this, R.layout.listview_layout, fileInfoList);
-//        listView.setAdapter(adapter);
-//
-//        listView.setOnItemClickListener((parent, view, position, id) -> {
-//            String filePath = filePaths.get(position);
-//            File file = new File(filePath);
-////
-//
-//            List<FileHeader> fileHeadersList = null;
-//
-//            try {
-//                fileHeadersList = new ZipFile(file).getFileHeaders();
-//                for (int i = 0; i < fileHeadersList.size(); i++) {
-//                    FileHeader fileHeader = (FileHeader) fileHeadersList.get(i);
-//                    System.out.println("****File Details for: " + fileHeader.getFileName() + "*****");
-//                    System.out.println("Name: " + fileHeader.getFileName());
-//                    System.out.println("Name: " + fileHeader.getZip64ExtendedInfo());
-//                    System.out.println("Name: " + fileHeader.getFileComment());
-//                    System.out.println("Name: " + fileHeader.getInternalFileAttributes());
-//                    System.out.println("Compressed Size: " + fileHeader.getCompressedSize());
-//                    System.out.println("Uncompressed Size: " + fileHeader.getUncompressedSize());
-//                    System.out.println("************************************************************");
-//                }
-//            } catch (ZipException e) {
-//                throw new RuntimeException(e);
-//            }
-//        });
-//    }
-//
-//    public void test(View view) {
-//        try {
-//            new ZipFile("/data/user/0/com.example.zipkp/files/testfile.zip").addFile("/data/user/0/com.example.zipkp/files/test.txt");
-//        } catch (ZipException e) {
-//            throw new RuntimeException(e);
-//        }
-//    }
