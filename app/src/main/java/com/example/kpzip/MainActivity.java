@@ -29,20 +29,14 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.Settings;
-import android.util.Log;
-import android.util.SparseBooleanArray;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.MotionEvent;
 import android.view.View;
-import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
-import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import java.util.ArrayList;
 
@@ -110,17 +104,27 @@ public class MainActivity extends AppCompatActivity {
         SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss", Locale.getDefault());
 
         List<String> zipFilesInformation = new ArrayList<>();
-        for (File file : zipFiles) {
-            String modificationDate = dateFormat.format(new Date(file.lastModified()));
-            zipFilesInformation.add("Имя: " + file.getName() + "\nПуть: " + file.getAbsolutePath() + "\nРазмер: " + file.length() + " байт" + "\nДата изменения: " + modificationDate);
+
+        TextView textSize = findViewById(R.id.textSizeNull);
+
+        if (zipFiles.size() == 0) {
+            textSize.setVisibility(View.VISIBLE);
+        } else {
+            textSize.setVisibility(View.GONE);
+
+            for (File file : zipFiles) {
+                String modificationDate = dateFormat.format(new Date(file.lastModified()));
+                zipFilesInformation.add("Имя: " + file.getName() + "\nПуть: " + file.getAbsolutePath() + "\nРазмер: " + file.length() + " байт" + "\nДата изменения: " + modificationDate);
+            }
+
+            deleteList = new ArrayList<>();
+            ArrayAdapter<String> adapter = new ArrayAdapter<>(this, R.layout.listivew_layout, zipFilesInformation);
+
+            listView = findViewById(R.id.listview);
+            listView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE);
+            listView.setAdapter(adapter);
         }
 
-        deleteList = new ArrayList<>();
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, R.layout.listivew_layout, zipFilesInformation);
-
-        listView = findViewById(R.id.listview);
-        listView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE);
-        listView.setAdapter(adapter);
 
         listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
             @Override
@@ -137,16 +141,15 @@ public class MainActivity extends AppCompatActivity {
                 if (background instanceof ColorDrawable)
                     color = ((ColorDrawable) background).getColor();
 
-                if (color == Color.WHITE) {
+                if (color == Color.parseColor("#bababa")) {
                     deleteList.remove(path);
-                    view.setBackgroundColor(Color.LTGRAY);
+                    view.setBackgroundColor(Color.parseColor("#ebebeb"));
                 } else {
-                    view.setBackgroundColor(Color.WHITE);
+                    view.setBackgroundColor(Color.parseColor("#bababa"));
                     deleteList.add(path);
                 }
 
-
-                return false;
+                return true;
             }
         });
 
@@ -154,6 +157,10 @@ public class MainActivity extends AppCompatActivity {
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                if (deleteList.size() == 0) {
+                    checkLongClick = false;
+                }
+
                 if (!checkLongClick) {
                     String fileInfo = (String)parent.getItemAtPosition(position);
                     String[] fileInfoParts = fileInfo.split("\n");
@@ -225,8 +232,6 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 deleteZIP();
             }
-        } else if (id == R.id.exit_menu) {
-            System.out.println("Выход");
         } else {
             System.out.println("Ошибка");
         }

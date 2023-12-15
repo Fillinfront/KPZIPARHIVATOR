@@ -75,6 +75,13 @@ public class MainActivity2 extends AppCompatActivity {
 
     boolean checkLongClick = false;
 
+    public List<String> fileInfos;
+    public List<FileItem> fileList;
+
+    public ArrayList<String> deleteList;
+
+    public TextView textSize;
+
     private static final int REQUEST_CODE_PICK_FILE = 1;
     private static final int REQUEST_CODE_WRITE_EXTERNAL_STORAGE = 2;
     private static final String TAG = "MainActivity2";
@@ -89,20 +96,19 @@ public class MainActivity2 extends AppCompatActivity {
         textview = findViewById(R.id.textName);
         textview.setText(MainActivity.zipNameExp);
 
+        deleteList = new ArrayList<>();
+
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
-        List<FileItem> fileList = getFileListFromArchive(zipFilePath);
+        fileList = new ArrayList<>();
+        fileList = getFileListFromArchive(zipFilePath);
 
-        List<String> fileInfos = new ArrayList<>();
-        for (FileItem item : fileList) {
-            String info = "Имя: " + item.getFileName() + ", Размер: " + item.getFileSize() + " байт";
-            System.out.println(info);
-            fileInfos.add(info);
-        }
+        textSize = findViewById(R.id.textSizeNull);
 
-        ArrayAdapter<String> filesAdapter = new ArrayAdapter<>(this, R.layout.listivew_layout,
-                fileInfos);
-        listView.setAdapter(filesAdapter);
+        fileInfos = new ArrayList<>();
+
+        updateList();
+
 
         listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
             @Override
@@ -121,10 +127,12 @@ public class MainActivity2 extends AppCompatActivity {
                 if (background instanceof ColorDrawable)
                     color = ((ColorDrawable) background).getColor();
 
-                if (color == Color.WHITE) {
-                    view.setBackgroundColor(Color.LTGRAY);
+                if (color == Color.parseColor("#bababa")) {
+                    view.setBackgroundColor(Color.parseColor("#ebebeb"));
+                    deleteList.remove(nameoFile);
                 } else {
-                    view.setBackgroundColor(Color.WHITE);
+                    deleteList.add(nameoFile);
+                    view.setBackgroundColor(Color.parseColor("#bababa"));
                 }
 
                 return false;
@@ -156,6 +164,27 @@ public class MainActivity2 extends AppCompatActivity {
                     Toast.makeText(this, "Ошибка при добавлении файла в архив", Toast.LENGTH_SHORT).show();
                 }
             }
+        }
+    }
+
+    public void updateList() {
+        fileList.clear();
+        fileList = getFileListFromArchive(MainActivity.zipPath);
+
+        if (fileList.size() == 0) {
+            textSize.setVisibility(View.VISIBLE);
+        } else {
+            textSize.setVisibility(View.GONE);
+
+            fileInfos.clear();
+            for (FileItem item : fileList) {
+                String info = "Имя: " + item.getFileName() + ", Размер: " + item.getFileSize() + " байт";
+                fileInfos.add(info);
+            }
+
+            ArrayAdapter<String> filesAdapter = new ArrayAdapter<>(this, R.layout.listivew_layout,
+                    fileInfos);
+            listView.setAdapter(filesAdapter);
         }
     }
 
@@ -202,6 +231,8 @@ public class MainActivity2 extends AppCompatActivity {
 
         archiveFile.delete();
         tempFile.renameTo(archiveFile);
+
+        updateList();
     }
 
     public void unzip() {
@@ -233,7 +264,6 @@ public class MainActivity2 extends AppCompatActivity {
                     File outputDir = new File(outputFile.getParent());
                     if (!outputDir.exists()) {
                         outputDir.mkdirs();
-                        Log.d("Decompress", "Creating directory: " + outputDir);
                     }
 
 
@@ -245,11 +275,12 @@ public class MainActivity2 extends AppCompatActivity {
                         while ((count = zin.read(buffer)) != -1) {
                             fout.write(buffer, 0, count);
                         }
-                        Log.d("Decompress", "File extracted: " + path);
+
                     }
                     zin.closeEntry();
                 }
             }
+            Toast.makeText(this, "/storage/emulated/0/Download/unziplocation/", Toast.LENGTH_SHORT).show();
         } catch (Exception e) {
             Log.e("Decompress", "unzip", e);
         }
@@ -362,40 +393,40 @@ public class MainActivity2 extends AppCompatActivity {
 
     public void removeFileFromZip() throws IOException {
 
-        String archivePath = MainActivity.zipPath;
+            String archivePath = MainActivity.zipPath;
+
+            for (String fileName : deleteList) {
+                File tempFile = new File(archivePath + ".temp");
+                ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(tempFile));
 
 
-        String fileName = nameoFile;
+                ZipInputStream zipInputStream = new ZipInputStream(new FileInputStream(archivePath));
 
 
-        File tempFile = new File(archivePath + ".temp");
-        ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(tempFile));
+                for (ZipEntry entry = zipInputStream.getNextEntry(); entry != null; entry = zipInputStream.getNextEntry()) {
+
+                    if (!entry.getName().equals(fileName)) {
+                        zipOutputStream.putNextEntry(new ZipEntry(entry.getName()));
 
 
-        ZipInputStream zipInputStream = new ZipInputStream(new FileInputStream(archivePath));
-
-
-        for (ZipEntry entry = zipInputStream.getNextEntry(); entry != null; entry = zipInputStream.getNextEntry()) {
-
-            if (!entry.getName().equals(fileName)) {
-                zipOutputStream.putNextEntry(new ZipEntry(entry.getName()));
-
-
-                byte[] buffer = new byte[1024];
-                int bytesRead;
-                while ((bytesRead = zipInputStream.read(buffer)) != -1) {
-                    zipOutputStream.write(buffer, 0, bytesRead);
+                        byte[] buffer = new byte[1024];
+                        int bytesRead;
+                        while ((bytesRead = zipInputStream.read(buffer)) != -1) {
+                            zipOutputStream.write(buffer, 0, bytesRead);
+                        }
+                    }
                 }
+
+
+                zipInputStream.close();
+                zipOutputStream.close();
+
+
+                File originalFile = new File(archivePath);
+                tempFile.renameTo(originalFile);
             }
-        }
 
-
-        zipInputStream.close();
-        zipOutputStream.close();
-
-
-        File originalFile = new File(archivePath);
-        tempFile.renameTo(originalFile);
+        updateList();
     }
 
     public static class FileItem {

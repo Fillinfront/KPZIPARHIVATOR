@@ -11,5 +11,5 @@
     <item
         android:id="@+id/exit_menu"
         android:orderInCategory="3"
-        android:title="Назад" />
+        android:title="Распаковать" />
 </menu>

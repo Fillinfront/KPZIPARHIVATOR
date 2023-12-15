@@ -4,6 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/black"
     tools:context=".MainActivity2">
 
     <LinearLayout
@@ -19,15 +20,16 @@
             android:gravity="center"
             android:orientation="vertical"
             tools:ignore="MissingConstraints"
-            android:background="@color/purple_200">
+            android:background="#ebebeb">
 
             <TextView
                 android:id="@+id/textName"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:textAlignment="center"
+                android:textColor="@color/black"
                 android:textSize="30dp"
-                android:text="sdfsfdfs"/>
+                android:text=""/>
 
         </LinearLayout>
 
@@ -36,19 +38,32 @@
             android:layout_width="410dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:background="@color/purple_200"
+            android:background="#ffffff"
             android:gravity="center"
             android:orientation="vertical"
             tools:ignore="MissingConstraints"
             tools:layout_editor_absoluteX="1dp"
             tools:layout_editor_absoluteY="52dp">
 
+            <TextView
+                android:id="@+id/textSizeNull"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:textAlignment="center"
+                android:textColor="@color/black"
+                android:textSize="20dp"
+                android:paddingTop="40dp"
+                android:text="В архиве нет файлов, добавьте их!"
+                />
 
             <ListView
                 android:id="@+id/listview"
                 android:layout_width="match_parent"
                 android:layout_height="200dp"
                 android:layout_weight="1"
+                android:divider="@color/white"
+                android:dividerHeight="5dp"
+                android:textColor="@color/black"
                 android:translationY="0dp" />
         </LinearLayout>
 

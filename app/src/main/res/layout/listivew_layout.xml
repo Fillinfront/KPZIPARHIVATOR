@@ -1,9 +1,10 @@
 <TextView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:background="@color/teal_200"
+    android:background="#ebebeb"
     android:id="@android:id/text1"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:textAppearance="?android:attr/textAppearanceListItemSmall"
     android:paddingLeft="6dp"
     android:paddingTop="6dp"
+    android:textColor="@color/black"
     android:paddingBottom="6dp" />

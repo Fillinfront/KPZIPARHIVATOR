@@ -14,9 +14,20 @@
         android:gravity="center"
         android:orientation="vertical"
         tools:ignore="MissingConstraints"
-        android:background="@color/purple_200"
+        android:background="#ffffff"
         tools:layout_editor_absoluteX="1dp"
         tools:layout_editor_absoluteY="52dp">
+
+        <TextView
+            android:id="@+id/textSizeNull"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:textAlignment="center"
+            android:textColor="@color/black"
+            android:textSize="20dp"
+            android:paddingTop="40dp"
+            android:text="На вашем устройстве нет файлов формата .zip, создайте их!"
+            />
 
         <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
             android:id="@+id/swipeupdate"
@@ -28,6 +39,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="200dp"
                 android:layout_weight="1"
+                android:divider="@color/white"
+                android:dividerHeight="5dp"
+                android:textColor="@color/black"
                 android:translationY="0dp" />
 
         </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
